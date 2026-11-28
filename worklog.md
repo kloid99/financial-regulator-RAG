@@ -2988,3 +2988,16 @@ worklog 1~80번, 체크리스트, 기획안 7~13장, `rag.py`, `app/demo.py`·`p
 - `deploy/build/`(덤프 복사본 111MB) 삭제는 권한 설정에서 거부돼 남아 있음 → 루트 `.gitignore`의 `deploy/build/` 줄은 유지(지우면 덤프 복사본이 커밋 대상이 됨). 사용자가 직접 지운 뒤 그 줄을 빼면 됨.
 - AWS 서버의 이미지·컨테이너와 로컬 DB 컨테이너 `interp-rag-db`는 그대로.
 - (추가) 사용자가 `deploy/build/`를 직접 지움 → 루트 `.gitignore`의 `deploy/build/` 줄 삭제.
+
+### 137. 개인 저장소 kloid99/financial-regulator-RAG 갱신 (사용자: "방금 내 브렌치에 올린 파일들을 내 financial-regulator-RAG 깃헙에 그대로 올릴거야 ... 클로드 표시는 하지마", 2026-11-27)
+- 대상 저장소에는 이미 이 RAG가 루트에 있었음(292ea99, 덤프는 LFS). kloid_rag(08c5300)의 이 폴더와 비교해 바뀐 9개만 반영: README.md, worklog.md, .dockerignore, deploy/ 4개, pipeline/c1_code_checks.py·c2_llm_judge.py. 덤프·data_file.zip은 이미 같음.
+- 대상 저장소의 .gitattributes·.gitignore와, 대상에만 있는 문서 3개(질문_방식과_결과_표시.md, 질문과_답변_예시.md, 평가_사람질문_안내.md)는 지우지 않고 둠.
+- 키·토큰 패턴 검사 통과. 커밋 d02e432 "수정 및 배포"(작성자 박지훈, Claude 표시 없음) → main에 push 확인.
+- (추가) 개인 저장소 README 데모 문구를 한 줄로 줄임(71f7de9), 저장소에만 있던 문서 3개 삭제(02b78f1 "문서 정리"). Claude 표시 없음. 이제 kloid_rag 폴더와 차이는 .gitattributes·.gitignore와 README 한 줄(로컬 미커밋)뿐.
+
+### 138. https 적용 (사용자: "이거 https로 바꾸고 고정 ip로 하려면 어떻게 해야돼", 2026-11-28)
+- 고정 IP는 이미 탄력적 IP(15.165.132.182)라 그대로. 사용자가 내도메인.한국에서 `interp-rag.p-e.kr` 등록(A 레코드 → 15.165.132.182), 보안 그룹에 HTTPS 443 추가.
+- SSH 타임아웃: 보안 그룹 SSH 소스가 예전 집 IP였음 → "내 IP"로 다시 저장해 해결.
+- 서버: 앱 컨테이너를 `-p 127.0.0.1:8080:8080`으로 다시 띄우고, Caddy(`caddy:2`, `--network host`, `reverse-proxy --from interp-rag.p-e.kr --to localhost:8080`) 추가.
+- 확인: https 200, http → 308 https 리다이렉트, 인증서 Let's Encrypt(YE2) ~2027-02-26(자동 갱신), 8080 외부 비노출. 내장 브라우저로 조문 조회 "은행법 제27조의2" 26건.
+- README 데모 링크 → `https://interp-rag.p-e.kr`, deploy/README.md에 5-7(https) 추가·6장 재배포 명령 수정. 커밋하지 않음.

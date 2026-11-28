@@ -3,7 +3,7 @@
 금융당국 회신 선례 RAG 데모를 **내 AWS 계정의 EC2 서버 한 대**에 올려 `http://<고정 IP>` 링크로 여는 방법과 비용입니다.
 팀 AI 에이전트(`최종프로젝트/deploy/`)와는 별개 서버이고, 같은 방식(EC2 + Docker)을 씁니다.
 
-**현재 배포**: http://15.165.132.182 (서울, m7i-flex.large, 2026-11-27). 서버를 중지해 두면 열리지 않습니다.
+**현재 배포**: https://interp-rag.p-e.kr (서울, m7i-flex.large, 고정 IP 15.165.132.182, 2026-11-28부터 https). 서버를 중지해 두면 열리지 않습니다.
 
 ```
 브라우저 ──80──▶ EC2 (Ubuntu) ──▶ 컨테이너 interp-rag
@@ -168,7 +168,25 @@ docker logs -f interp-rag   # "You can now view your Streamlit app" 이 보이�
 
 브라우저에서 **`http://<고정IP>`** 를 엽니다. 처음에는 임베딩 모델을 불러오느라 30~80초 걸립니다. 이 주소를 GitHub README에 데모 링크로 넣으면 됩니다.
 
-> 주소가 `http://`라서 브라우저에 "주의 요함"이 뜹니다. `https://`가 필요하면 팀 배포처럼 무료 도메인 + certbot을 붙여야 합니다(`최종프로젝트/deploy/README.md` 6번).
+> 주소가 `http://`라서 브라우저에 "주의 요함"이 뜹니다. https로 바꾸려면 5-7을 합니다.
+
+### 5-7. https 붙이기 (무료 도메인 + Caddy)
+
+1. **도메인**: 내도메인.한국에서 무료 도메인(예: `interp-rag.p-e.kr`)을 등록하고 IP 연결(A 레코드)을 고정 IP로 지정. 내 PC에서 `nslookup 도메인`으로 고정 IP가 나오면 됨
+2. **보안 그룹**: 인바운드 규칙에 **HTTPS(443) / Anywhere-IPv4** 추가. HTTP(80)는 인증서 발급·자동 전환에 필요하니 그대로 둠
+3. **서버 안**: 앱은 서버 내부(127.0.0.1:8080)로만 열고, 그 앞에 Caddy를 둠. Caddy가 Let's Encrypt 인증서를 자동으로 받고 갱신하며, http는 https로 넘겨 줌
+
+```bash
+docker rm -f interp-rag
+docker run -d --name interp-rag --restart unless-stopped -p 127.0.0.1:8080:8080 \
+  --env-file ~/interp-rag.env -e RAG_DSN=postgresql://rag@localhost:5432/rag interp-rag
+docker run -d --name caddy --restart unless-stopped --network host \
+  -v caddy_data:/data -v caddy_config:/config \
+  caddy:2 caddy reverse-proxy --from interp-rag.p-e.kr --to localhost:8080
+docker logs caddy 2>&1 | grep -i certificate   # "certificate obtained successfully"
+```
+
+> SSH가 타임아웃 나면 집 IP가 바뀐 것입니다. 보안 그룹의 SSH 규칙 소스를 **내 IP**로 다시 저장합니다.
 
 ## 6. 평소 쓰기
 
@@ -186,9 +204,11 @@ git pull
 git lfs pull --include "최종프로젝트/금융당국 회신 선례 RAG/rag_db.dump"
 docker build -f deploy/Dockerfile -t interp-rag . && docker builder prune -f
 docker rm -f interp-rag
-docker run -d --name interp-rag --restart unless-stopped -p 80:8080 \
+docker run -d --name interp-rag --restart unless-stopped -p 127.0.0.1:8080:8080 \
   --env-file ~/interp-rag.env -e RAG_DSN=postgresql://rag@localhost:5432/rag interp-rag
 ```
+
+https(5-7)를 붙인 뒤에는 위처럼 `-p 127.0.0.1:8080:8080`으로 띄웁니다. Caddy 컨테이너는 그대로 둡니다.
 
 ## 7. 다 쓰고 정리하기 (요금 0으로)
 
